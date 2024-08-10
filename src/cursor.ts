@@ -1,46 +1,52 @@
 type Vector = { x: number; y: number }
-
+type CursorEvent = { delta: Vector; total: Vector; event: MouseEvent; timespan: number }
 /**
  * cursor
  *
- * @param e MouseEvent
+ * @param event MouseEvent
  * @param callback called every onMouseMove
  * @returns Promise resolved onMouseUp
  */
-export const cursor = (
-  e: MouseEvent,
-  callback: (delta: Vector, movement: Vector, event: MouseEvent, timespan: number) => void,
-) => {
-  return new Promise<{ delta: Vector; event: MouseEvent; timespan: number }>(resolve => {
+export const cursor = (event: MouseEvent, callback: (config: CursorEvent) => void) => {
+  return new Promise<CursorEvent>(resolve => {
     const start = {
-      x: e.clientX,
-      y: e.clientY,
+      x: event.clientX,
+      y: event.clientY,
     }
+    let previous = start
     const startTime = performance.now()
 
-    const onMouseMove = (e: MouseEvent) => {
-      callback(
-        {
-          x: start.x - e.clientX,
-          y: start.y - e.clientY,
-        },
-        { x: e.movementX, y: e.movementY },
-        e,
-        performance.now() - startTime,
-      )
-    }
-    const onMouseUp = (e: MouseEvent) => {
-      window.removeEventListener('mousemove', onMouseMove)
-      window.removeEventListener('mouseup', onMouseUp)
-      const delta = {
-        x: start.x - e.clientX,
-        y: start.y - e.clientY,
+    function onUpdate(event: MouseEvent) {
+      const current = {
+        x: event.clientX,
+        y: event.clientY,
       }
-      callback(delta, { x: e.movementX, y: e.movementY }, e, performance.now() - startTime)
-      resolve({ delta, event: e, timespan: performance.now() - startTime })
+      const delta = {
+        x: current.x - previous.x,
+        y: current.y - previous.y,
+      }
+      const total = {
+        x: start.x - current.x,
+        y: start.y - current.y,
+      }
+      previous = current
+      const result = {
+        total,
+        delta,
+        event,
+        timespan: performance.now() - startTime,
+      }
+      callback(result)
+      return result
     }
 
-    window.addEventListener('mousemove', onMouseMove)
+    const onMouseUp = (event: MouseEvent) => {
+      window.removeEventListener('mousemove', onUpdate)
+      window.removeEventListener('mouseup', onMouseUp)
+      resolve(onUpdate(event))
+    }
+
+    window.addEventListener('mousemove', onUpdate)
     window.addEventListener('mouseup', onMouseUp)
   })
 }

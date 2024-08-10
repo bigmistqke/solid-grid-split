@@ -52,6 +52,8 @@ type SizeProps = FractionProps | PixelProps | PercentageProps
 
 const panePropsMap = new WeakMap<Element, SizeProps>()
 const handleSet = new WeakSet<Element>()
+/** Symbol returned from `SplitContext.dragHandle()` when there was no resulting overflow after offsetting the pane-sizes. */
+const NO_OVERFLOW = Symbol('no-overflow')
 
 /**********************************************************************************/
 /*                                                                                */
@@ -68,7 +70,7 @@ const isPercentageProps = (props: SizeProps): props is PercentageProps =>
 const isPixelProps = (props: SizeProps): props is PixelProps => isPixelSize(props.size)
 const isFractionProps = (props: SizeProps): props is FractionProps => isFractionSize(props.size)
 
-const getProp = (element: Element) => panePropsMap.get(element)
+const getProps = (element: Element) => panePropsMap.get(element)
 const isNotHandle = (element: Element) => !handleSet.has(element)
 
 const resolveNonFractionValue = (containerSizePx: number, value: PixelValue | PercentageValue) =>
@@ -156,7 +158,7 @@ function getNeigboringPanes(panes: Element[], handle: Element) {
 /**********************************************************************************/
 
 const SplitContext = createContext<{
-  updateOffset: (handle: Element, offset: number) => number | true
+  dragHandle: (handle: Element, deltaX: number) => number | typeof NO_OVERFLOW
   type: 'column' | 'row'
 }>()
 function useSplit() {
@@ -211,6 +213,20 @@ export function Split(
 
   const containerSize = () => (config.type === 'column' ? domRect()?.width : domRect()?.height) || 0
 
+  function getPixelSizeOfNonFractionPane(element: Element) {
+    const props = getProps(element)
+    const offset = getOffset(element)
+    if (!props || isFractionProps(props)) return 0
+    return resolveNonFractionValue(containerSize(), props.size) - offset
+  }
+
+  function getPixelSizeOfFractionPane(element: Element) {
+    const props = getProps(element)
+    const offset = getOffset(element)
+    if (!props || !isFractionProps(props)) return 0
+    return (parseFloat(props.size) + offset) * pixelsPerFraction()
+  }
+
   createEffect(() => {
     const observer = new ResizeObserver(entries => {
       for (let entry of entries) {
@@ -232,20 +248,27 @@ export function Split(
     return offsets().get(element) || 0
   }
 
-  function pixelsPerFraction() {
-    const totalSpace =
+  function getTotalPixelSizeOfFractalPanes() {
+    return (
       containerSize() -
-      nonFractionPanes().reduce(
-        (total, pane) => total + (config.type === 'column' ? pane.clientWidth : pane.clientHeight),
-        0,
-      )
+      getNonFractionPanes().reduce((total, pane) => total + getPixelSizeOfNonFractionPane(pane), 0)
+    )
+  }
 
-    const totalFrUnits = fractionPanes().reduce(
-      (total, pane) => total + parseFloat(panePropsMap.get(pane)!.size),
+  function getTotalNonFractionPixelSize() {
+    return getNonFractionPanes().reduce(
+      (total, pane) => total + getPixelSizeOfNonFractionPane(pane),
       0,
     )
+  }
 
-    return totalSpace / totalFrUnits
+  function pixelsPerFraction() {
+    const totalSize = getTotalPixelSizeOfFractalPanes()
+    const totalFrUnits = getFractionPanes().reduce(
+      (total, pane) => total + parseFloat(getProps(pane)!.size),
+      0,
+    )
+    return totalSize / totalFrUnits
   }
 
   const offspring = children(
@@ -253,14 +276,16 @@ export function Split(
       get type() {
         return config.type
       },
-      updateOffset(handle, deltaPx) {
+      dragHandle(handle, deltaPx): number | typeof NO_OVERFLOW {
+        if (deltaPx === 0) return NO_OVERFLOW
+
         const neighbors = getNeigboringPanes(panes(), handle)
-        if (!neighbors) return true
+        if (!neighbors) return NO_OVERFLOW
 
         const [left, right] = neighbors
 
-        const leftProps = getProp(left)!
-        const rightProps = getProp(right)!
+        const leftProps = getProps(left)!
+        const rightProps = getProps(right)!
 
         const leftOffset = getOffset(left)!
         const rightOffset = getOffset(right)!
@@ -281,47 +306,56 @@ export function Split(
           ? deltaPx + rightOverflow
           : deltaPx
 
-        if (!isLeftFraction && !isRightFraction) {
-          offset(left, deltaPx)
-          offset(right, -deltaPx)
+        // Handle case where both panes or non-fraction panes
+        {
+          if (!isLeftFraction && !isRightFraction) {
+            offset(left, deltaPx)
+            offset(right, -deltaPx)
 
-          if (leftOverflow || rightOverflow) {
-            return leftOverflow || rightOverflow
+            if (leftOverflow || rightOverflow) {
+              return leftOverflow || rightOverflow
+            }
+
+            return NO_OVERFLOW
           }
-
-          return true
         }
 
-        let deltaFr = deltaPx / pixelsPerFraction()
+        // Handle case where both panes or fraction panes
+        {
+          let deltaFr = deltaPx / pixelsPerFraction()
 
-        if (isLeftFraction && isRightFraction) {
-          const leftOverflow = getFractionOverflow(leftProps, leftOffset, deltaFr)
-          const rightOverflow = getFractionOverflow(rightProps, rightOffset, -deltaFr)
-          if (leftOverflow < 0) {
-            deltaFr -= leftOverflow
-          } else if (rightOverflow < 0) {
-            deltaFr += rightOverflow
+          if (isLeftFraction && isRightFraction) {
+            const leftOverflow = getFractionOverflow(leftProps, leftOffset, deltaFr)
+            const rightOverflow = getFractionOverflow(rightProps, rightOffset, -deltaFr)
+            if (leftOverflow < 0) {
+              deltaFr -= leftOverflow
+            } else if (rightOverflow < 0) {
+              deltaFr += rightOverflow
+            }
+
+            offset(left, deltaFr)
+            offset(right, -deltaFr)
+
+            if (leftOverflow < 0) {
+              return leftOverflow * pixelsPerFraction()
+            } else if (rightOverflow < 0) {
+              return -rightOverflow * pixelsPerFraction()
+            }
+
+            return NO_OVERFLOW
           }
-
-          offset(left, deltaFr)
-          offset(right, -deltaFr)
-
-          if (leftOverflow < 0) {
-            return leftOverflow * pixelsPerFraction()
-          } else if (rightOverflow < 0) {
-            return -rightOverflow * pixelsPerFraction()
-          }
-
-          return true
         }
 
-        if (isRightFraction) {
-          offset(left, deltaPx)
-        } else {
-          offset(right, -deltaPx)
+        // Handle case where one of the panes is a fraction-pane and the other is a non-fraction-pane
+        {
+          if (isRightFraction) {
+            offset(left, deltaPx)
+          } else {
+            offset(right, -deltaPx)
+          }
         }
 
-        return true
+        return NO_OVERFLOW
       },
     }),
   )
@@ -329,13 +363,13 @@ export function Split(
   const panes = createMemo(
     () => offspring.toArray().filter(value => panePropsMap.has(value as Element)) as Element[],
   )
-  const fractionPanes = () => panes().filter(pane => isFractionProps(panePropsMap.get(pane)!))
-  const nonFractionPanes = () => panes().filter(pane => !isFractionProps(panePropsMap.get(pane)!))
+  const getFractionPanes = () => panes().filter(pane => isFractionProps(getProps(pane)!))
+  const getNonFractionPanes = () => panes().filter(pane => !isFractionProps(getProps(pane)!))
   const template = () =>
     panes()
-      .map(value => {
-        const props = panePropsMap.get(value)!
-        const offset = offsets().get(value) || 0
+      .map(pane => {
+        const props = getProps(pane)!
+        const offset = getOffset(pane)
 
         if (isFractionProps(props)) {
           return offset ? `${parseFloat(props.size) - offset}fr` : props.size
@@ -392,7 +426,14 @@ type PaneProps = Omit<ComponentProps<'span'>, 'style'> & {
  */
 function Pane(props: PaneProps) {
   const config = mergeProps({ size: `1fr` } satisfies SizeProps, props)
-  const [, rest] = splitProps(props, ['size', 'min', 'max', 'style'])
+  const [, rest] = splitProps(props, [
+    'size',
+    // @ts-expect-error TODO: props don't have min-prop when using fraction units
+    'min',
+    // @ts-expect-error TODO: props don't have max-prop when using fraction units
+    'max',
+    'style',
+  ])
   const ref = (
     <span style={{ overflow: 'hidden', ...props.style }} {...rest}>
       {props.children}
@@ -420,6 +461,7 @@ function Pane(props: PaneProps) {
  * <Split.Handle size="10px" />
  *
  * @warning If placed on the edge of a Split layout, the Handle will be ignored.
+ * @warning If two handles are placed next to each other, they both control the same neighboring panes.
  * @warning Fraction-based sizes (`fr`) cannot have `min` or `max` constraints.
  */
 function Handle(props: PaneProps) {
@@ -428,25 +470,24 @@ function Handle(props: PaneProps) {
     <Pane
       {...props}
       onPointerDown={e => {
-        let overflow = {
+        let totalOverflow = {
           x: 0,
           y: 0,
         }
-        cursor(e, (_, movement) => {
-          const result = context.updateOffset(
+        cursor(e, ({ delta }) => {
+          const overflow = context.dragHandle(
             resolveNode(handle),
-            context.type === 'column' ? movement.x + overflow.x : movement.y + overflow.y,
+            context.type === 'column' ? delta.x + totalOverflow.x : delta.y + totalOverflow.y,
           )
-          console.log(result)
-          if (result === true) {
+          if (overflow === NO_OVERFLOW) {
             // reset overflow
-            overflow = {
+            totalOverflow = {
               x: 0,
               y: 0,
             }
           } else {
-            overflow.x += context.type === 'column' ? movement.x : result
-            overflow.y += context.type !== 'column' ? movement.y : result
+            totalOverflow.x += context.type === 'column' ? delta.x : overflow
+            totalOverflow.y += context.type !== 'column' ? delta.y : overflow
           }
         })
       }}
