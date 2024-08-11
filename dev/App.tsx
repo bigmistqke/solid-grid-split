@@ -1,15 +1,37 @@
+import { createEffect, createSignal } from 'solid-js'
 import { Split } from 'src'
-import './App.module.css'
+import styles from './App.module.css'
+
+function SidePane() {
+  const [fixed, setFixed] = createSignal(false)
+  createEffect(() => console.log('fixed', fixed()))
+  return (
+    <Split
+      class={styles.pane}
+      onResize={domRect => setFixed(domRect.width <= 100)}
+      size={fixed() ? '100px' : '1fr'}
+      max={fixed() ? '100px' : undefined}
+    >
+      <Split.Pane class={styles.pane} size="1fr">
+        fraction
+      </Split.Pane>
+      <Split.Handle size="10px" style={{ background: 'red' }} />
+      <Split.Pane class={styles.pane} size="1fr">
+        fraction
+      </Split.Pane>
+    </Split>
+  )
+}
 
 function App() {
   return (
     <Split style={{ height: '100vh' }}>
-      <Split.Pane size="100px">hallo</Split.Pane>
+      <Split.Pane class={styles.pane} size="calc(50% - 5px)">
+        percentage
+      </Split.Pane>
       <Split.Handle size="10px" style={{ background: 'red' }} />
-      <Split.Pane size="0.25fr">hallo</Split.Pane>
-      <Split.Handle size="10px" style={{ background: 'red' }} />
-      <Split.Pane size="0.25fr" style={{ background: 'blue' }}>
-        hallo
+      <Split.Pane class={styles.pane} size="calc(50% - 5px)">
+        fraction
       </Split.Pane>
     </Split>
   )

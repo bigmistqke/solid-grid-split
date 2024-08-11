@@ -8,8 +8,6 @@
 
 Solid split-pane-component based on CSS grid templates: the `<Grid/>`-component returns a span with a CSS grid template, the values defined by its children's props. All valid CSS grid size units are supported, such as `fr` (fraction), `px` (pixels), and `%` (percentage) and CSS grid-rules apply (you can not combine fraction units with `min()` or `max()`).
 
-It is possible to combine panes that use different size units, but there are currently some quirks when you combine fraction-panes in combination with percentage/pixel-panes: when a handle is moved that neighbors a fraction and a non-fraction pane, the offset is only distributed to the non-fraction pane. This means all fraction-panes, even the ones currently not neighboring the handle, get resized in the process (`fraction units are weird`). This can be unexpected, but can also be a feature.
-
 ## Quick start
 
 Install it:
