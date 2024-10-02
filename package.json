@@ -1,6 +1,6 @@
 {
   "name": "@bigmistqke/solid-grid-split",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Solid pane-component based on grid-templates",
   "license": "MIT",
   "author": "bigmistqke",
