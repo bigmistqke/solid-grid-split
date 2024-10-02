@@ -26,11 +26,15 @@ function SidePane() {
 function App() {
   return (
     <Split style={{ height: '100vh' }}>
-      <Split.Pane class={styles.pane} size="calc(50% - 5px)">
+      <Split.Pane class={styles.pane} size="50%">
         percentage
       </Split.Pane>
       <Split.Handle size="10px" style={{ background: 'red' }} />
-      <Split.Pane class={styles.pane} size="calc(50% - 5px)">
+      <Split.Pane class={styles.pane} size="1fr">
+        fraction
+      </Split.Pane>
+      <Split.Handle size="10px" style={{ background: 'red' }} />
+      <Split.Pane class={styles.pane} size="1fr">
         fraction
       </Split.Pane>
     </Split>

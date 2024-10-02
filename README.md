@@ -8,6 +8,8 @@
 
 Solid split-pane-component based on CSS grid templates: the `<Grid/>`-component returns a span with a CSS grid template, the values defined by its children's props. All valid CSS grid size units are supported, such as `fr` (fraction), `px` (pixels), and `%` (percentage) and CSS grid-rules apply (you can not combine fraction units with `min()` or `max()`).
 
+> You should probably use [@corvu/resizable](https://corvu.dev/docs/primitives/resizable/) instead.
+
 ## Quick start
 
 Install it:
