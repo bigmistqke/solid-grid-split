@@ -3,7 +3,12 @@ body {
   padding: 0px;
 }
 
-[data-active-pane='true'].pane {
+[data-active-pane].pane,
+[data-active-pane] .pane {
   background: yellow;
   user-select: none;
+}
+
+[data-active-handle] {
+  background: blue !important;
 }
