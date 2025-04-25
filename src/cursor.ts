@@ -1,5 +1,15 @@
 type Vector = { x: number; y: number }
 type CursorEvent = { delta: Vector; total: Vector; event: MouseEvent; timespan: number }
+
+function vectorFromEvent(event){
+  const isTouch = "touches" in event
+  //event = (isTouch ? event.touches[0] : event)
+  return {
+    x: event.touches[0].clientX,
+    y: event.touches[0].clientY
+  }
+}
+
 /**
  * cursor
  *
@@ -7,20 +17,19 @@ type CursorEvent = { delta: Vector; total: Vector; event: MouseEvent; timespan: 
  * @param callback called every onMouseMove
  * @returns Promise resolved onMouseUp
  */
-export const cursor = (event: MouseEvent, callback: (config: CursorEvent) => void) => {
+export const cursor = (event: PointerEvent | TouchEvent, callback: (config: CursorEvent) => void) => {
+
+
+  const isTouch = "touches" in event
+  const start = vectorFromEvent(event)
+  const controller = new AbortController()
+
   return new Promise<CursorEvent>(resolve => {
-    const start = {
-      x: event.clientX,
-      y: event.clientY,
-    }
     let previous = start
     const startTime = performance.now()
 
     function onUpdate(event: MouseEvent) {
-      const current = {
-        x: event.clientX,
-        y: event.clientY,
-      }
+      const current = vectorFromEvent(event)
       const delta = {
         x: current.x - previous.x,
         y: current.y - previous.y,
@@ -40,13 +49,21 @@ export const cursor = (event: MouseEvent, callback: (config: CursorEvent) => voi
       return result
     }
 
-    const onMouseUp = (event: MouseEvent) => {
-      window.removeEventListener('mousemove', onUpdate)
-      window.removeEventListener('mouseup', onMouseUp)
+    function onEnd (event: MouseEvent) {
+      controller.abort()
       resolve(onUpdate(event))
     }
 
-    window.addEventListener('mousemove', onUpdate)
-    window.addEventListener('mouseup', onMouseUp)
+    if(isTouch){
+
+    window.addEventListener('touchmove', onUpdate, { signal: controller.signal })
+    window.addEventListener('touchend', onEnd, { signal: controller.signal })
+
+    } else {
+
+    window.addEventListener('pointermove', onUpdate, { signal: controller.signal })
+    window.addEventListener('pointerup', onEnd, { signal: controller.signal })
+
+    }
   })
 }

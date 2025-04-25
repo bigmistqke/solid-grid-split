@@ -153,7 +153,7 @@ function Base(props: BaseProps) {
 
   const pane = (
     <span
-      style={{ overflow: 'hidden', ...props.style }}
+      style={{ overflow: 'hidden', 'touch-action': 'none', ...props.style }}
       {...rest}
       ref={mergeRefs(props, value => (ref = value))}
       data-active-pane={context?.isActivePane(ref!) || undefined}
@@ -576,39 +576,42 @@ function Handle(props: BaseProps) {
   const context = useSplit()
   if (!context) throw `Split.Handle should be used within a Split-component`
   const [active, setActive] = createSignal(false)
+
+  async function onMoveStart(e) {
+
+    let totalOverflow = {
+        x: 0,
+        y: 0
+    }
+
+
+    setActive(true)
+
+    const neighbors = context.dragHandleStart(resolveNode(handle))
+
+    if (!neighbors) return
+
+    await cursor(e, ({ delta }) => {
+
+
+       const overflow = context.dragHandle(neighbors, context.type === 'column' ? delta.x + totalOverflow.x : delta.y + totalOverflow.y)
+                                                            if (overflow === NO_OVERFLOW) {                         // reset overflow
+                                                              totalOverflow = { x: 0, y: 0 }
+                                                            } else {
+                                                              totalOverflow.x += context.type === 'column' ? delta.x : overflow
+                                                              totalOverflow.y += context.type !== 'column' ? delta.y : overflow                                         }
+                                                                                                                                                                    })
+                                                                                                                                                                    context.dragHandleEnd()
+                                                                                                                                                                    setActive(false)
+  }
+
+
   const handle = (
     <Base
       {...props}
       data-active-handle={active() || undefined}
-      onPointerDown={async e => {
-        let totalOverflow = {
-          x: 0,
-          y: 0,
-        }
-        setActive(true)
-
-        const neighbors = context.dragHandleStart(resolveNode(handle))
-        if (!neighbors) return
-        await cursor(e, ({ delta }) => {
-          const overflow = context.dragHandle(
-            neighbors,
-            context.type === 'column' ? delta.x + totalOverflow.x : delta.y + totalOverflow.y,
-          )
-          if (overflow === NO_OVERFLOW) {
-            // reset overflow
-            totalOverflow = {
-              x: 0,
-              y: 0,
-            }
-          } else {
-            totalOverflow.x += context.type === 'column' ? delta.x : overflow
-            totalOverflow.y += context.type !== 'column' ? delta.y : overflow
-          }
-        })
-
-        context.dragHandleEnd()
-        setActive(false)
-      }}
+      onPointerDown={onMoveStart}
+      onTouchStart={onMoveStart}
     />
   ) as unknown as Nested<Element>
   handleSet.add(resolveNode(handle))
