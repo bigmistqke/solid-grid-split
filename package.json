@@ -1,6 +1,6 @@
 {
   "name": "@bigmistqke/solid-grid-split",
-  "version": "0.0.2",
+  "version": "1.0.0-next.0",
   "description": "Solid pane-component based on grid-templates",
   "license": "MIT",
   "author": "bigmistqke",
@@ -22,29 +22,19 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "browser": {},
   "exports": {
-    "solid": {
-      "development": "./dist/dev.jsx",
-      "import": "./dist/index.jsx"
-    },
-    "development": {
+    ".": {
       "import": {
         "types": "./dist/index.d.ts",
-        "default": "./dist/dev.js"
+        "default": "./dist/index.js"
       }
-    },
-    "import": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
     }
   },
-  "typesVersions": {},
   "scripts": {
     "dev": "vite serve dev",
-    "build": "tsup",
+    "build": "vite build .",
     "test": "concurrently pnpm:test:*",
-    "test:client": "vitest",
+    "test:client": "vitest --run",
     "test:ssr": "pnpm run test:client --mode ssr",
     "prepublishOnly": "pnpm build",
     "format": "prettier --ignore-path .gitignore -w \"src/**/*.{js,ts,json,css,tsx,jsx}\" \"dev/**/*.{js,ts,json,css,tsx,jsx}\"",
@@ -53,28 +43,31 @@
     "lint:types": "tsc --noEmit",
     "update-deps": "pnpm up -Li"
   },
+  "dependencies": {
+    "@bigmistqke/pointer": "^0.1.0"
+  },
   "peerDependencies": {
-    "solid-js": "^1.6.0"
+    "@solidjs/web": "^2.0.0-rc.9",
+    "solid-js": "^2.0.0-rc.9"
   },
   "devDependencies": {
-    "@types/node": "^20.12.12",
+    "@solidjs/vite-plugin": "3.0.0-next.30",
+    "@solidjs/web": "2.0.0-rc.9",
+    "@types/node": "^24.6.1",
     "@typescript-eslint/eslint-plugin": "^7.9.0",
     "@typescript-eslint/parser": "^7.9.0",
     "concurrently": "^8.2.2",
-    "esbuild": "^0.21.3",
-    "esbuild-plugin-solid": "^0.6.0",
     "eslint": "^8.56.0",
     "eslint-plugin-eslint-comments": "^3.2.0",
     "eslint-plugin-no-only-tests": "^3.1.0",
     "jsdom": "^24.0.0",
     "prettier": "3.0.0",
-    "solid-js": "^1.8.17",
-    "tsup": "^8.0.2",
-    "tsup-preset-solid": "^2.2.0",
+    "solid-js": "2.0.0-rc.9",
     "typescript": "^5.4.5",
-    "vite": "^5.2.11",
-    "vite-plugin-solid": "^2.10.2",
-    "vitest": "^1.6.0"
+    "vite": "^6.4.3",
+    "vite-plugin-dts": "5.1.0",
+    "vite-plugin-solid": "3.0.0-next.27",
+    "vitest": "^5.0.1"
   },
   "keywords": [
     "solid"
