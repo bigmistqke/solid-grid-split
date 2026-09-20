@@ -188,13 +188,13 @@ type SplitProps = Omit<ElementProps<HTMLSpanElement>, 'style'> &
  * Split components can be nested to create more complex layouts.
  *
  * @param props - The props for the Split component.
- * @param [props.direction='column'] - The direction of the split, either `column` or `row`.
+ * @param [props.direction='row'] - The direction of the split, either `row` (horizontal) or `column` (vertical).
  * @param [props.style] - The CSS style applied to the grid container.
  * @returns The Split component containing panes.
  *
  * @example
  * <Split style={{ height: '100vh' }}>
- *  <Split direction="row" style={{ height: '100vh' }}>
+ *  <Split direction="column" style={{ height: '100vh' }}>
  *    <Split.Pane size="1fr">Top Pane</Split.Pane>
  *    <Split.Handle size="10px" />
  *    <Split.Pane size="2fr">Bottom Pane</Split.Pane>
@@ -208,7 +208,7 @@ type SplitProps = Omit<ElementProps<HTMLSpanElement>, 'style'> &
  * @warning All elements that are not `Split`, `Split.Handle` or `Split.Pane` are filtered from the children.
  */
 export function Split(props: SplitProps) {
-  const config = merge({ direction: 'column' as const }, props)
+  const config = merge({ direction: 'row' as const }, props)
   const rest = omit(props, 'direction', 'style', 'ref')
   const [domRect, setDomRect] = createSignal<DOMRect>()
   const [activePanels, setActivePanels] = createSignal<readonly [Element, Element] | undefined>(
@@ -318,7 +318,7 @@ export function Split(props: SplitProps) {
   const nonFractionPanes = () => panes().filter(pane => !isFractionProps(getProps(pane)!))
 
   const containerSize = () =>
-    (config.direction === 'column' ? domRect()?.width : domRect()?.height) || 0
+    (config.direction === 'row' ? domRect()?.width : domRect()?.height) || 0
 
   function offset(element: Element, delta: number) {
     setOffsets(map => {
@@ -507,7 +507,7 @@ export function Split(props: SplitProps) {
       ref={combineRefs(setSplitRef, props.ref)}
       style={{
         ...props.style,
-        [`grid-template-${config.direction}s`]: template(),
+        [`grid-template-${config.direction === 'row' ? 'column' : 'row'}s`]: template(),
       }}
       {...rest}
       class={styles.split}
@@ -569,7 +569,7 @@ function Handle(props: BaseProps) {
         await pointer(e, ({ delta }) => {
           const overflow = context.dragHandle(
             neighbors,
-            context.direction === 'column' ? delta.x + totalOverflow.x : delta.y + totalOverflow.y,
+            context.direction === 'row' ? delta.x + totalOverflow.x : delta.y + totalOverflow.y,
           )
 
           if (overflow === NO_OVERFLOW) {
@@ -579,8 +579,8 @@ function Handle(props: BaseProps) {
               y: 0,
             }
           } else {
-            totalOverflow.x += context.direction === 'column' ? delta.x : overflow
-            totalOverflow.y += context.direction !== 'column' ? delta.y : overflow
+            totalOverflow.x += context.direction === 'row' ? delta.x : overflow
+            totalOverflow.y += context.direction !== 'row' ? delta.y : overflow
           }
         })
 

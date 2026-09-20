@@ -12,7 +12,7 @@ function App() {
         fraction
       </Split.Pane>
       <Split.Handle size="10px" style={{ background: 'red' }} />
-      <Split style={{ height: '100vh' }} direction="row">
+      <Split style={{ height: '100vh' }} direction="column">
         <Split.Pane class={styles.pane} size="50%">
           percentage
         </Split.Pane>
